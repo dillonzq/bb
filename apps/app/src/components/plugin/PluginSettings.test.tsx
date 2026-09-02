@@ -390,6 +390,8 @@ function installedPlugin(
     statusDetail: null,
     description: "Linear integration",
     name: "Linear",
+    screenshots: [],
+    collections: [],
     icon: null,
     iconUrl: null,
     logoUrl: null,
