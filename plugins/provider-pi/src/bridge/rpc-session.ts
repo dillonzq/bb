@@ -354,7 +354,10 @@ export class PiRpcSession {
           return null;
         }
         this.resolvePendingInputConsumption(tracked.pending);
-        const state = await this.getState().catch(() => null);
+        const state = await Promise.race([
+          this.getState().catch(() => null),
+          settlement.then(() => null),
+        ]);
         await this.deliveryChain;
         if (
           state?.isStreaming === false &&

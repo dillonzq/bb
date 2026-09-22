@@ -148,6 +148,29 @@ it("settles handled commands and intercepted input without agent events", async 
     expect(events).toContain("agent_start");
     expect(events).toContain("agent_end");
     expect(onDone).not.toHaveBeenCalled();
+
+    let releaseProbe: () => void = () => undefined;
+    probe.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          releaseProbe = () => {
+            resolve({ isStreaming: false, isCompacting: false });
+          };
+        }),
+    );
+    const completed = session.prompt("finish despite hanging probe");
+    await completed.consumed;
+    let completedOutcome: PiPromptRunOutcome | null | "pending" = "pending";
+    void completed.settled.then((outcome) => {
+      completedOutcome = outcome;
+    });
+    try {
+      await expect.poll(() => completedOutcome, { timeout: 2000 }).toEqual({});
+    } finally {
+      releaseProbe();
+    }
+    await expect(session.prompt("/return-now").settled).resolves.toEqual({});
+    expect(onDone).not.toHaveBeenCalled();
   } finally {
     writeFileSync(join(dir, "start"), "go");
     writeFileSync(join(dir, "finish"), "go");
