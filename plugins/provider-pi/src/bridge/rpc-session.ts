@@ -354,10 +354,10 @@ export class PiRpcSession {
           return null;
         }
         this.resolvePendingInputConsumption(tracked.pending);
-        const state = await this.getState();
+        const state = await this.getState().catch(() => null);
         await this.deliveryChain;
         if (
-          state.isStreaming === false &&
+          state?.isStreaming === false &&
           state.isCompacting === false &&
           this.dropRunSettlement(pendingRun)
         ) {

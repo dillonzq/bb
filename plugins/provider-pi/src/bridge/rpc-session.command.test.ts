@@ -82,6 +82,7 @@ it("settles handled commands and intercepted input without agent events", async 
     ]),
   );
   const events: string[] = [];
+  const onDone = vi.fn();
   const session = new PiRpcSession(
     {
       cwd: dir,
@@ -96,7 +97,7 @@ it("settles handled commands and intercepted input without agent events", async 
     },
     async () => ({ content: "" }),
     (event) => events.push(event.type),
-    () => undefined,
+    onDone,
   );
   try {
     await session.start();
@@ -125,10 +126,15 @@ it("settles handled commands and intercepted input without agent events", async 
     await expect.poll(() => existsSync(join(dir, "preflight"))).toBe(true);
     expect(consumed).toBe(false);
     expect(settled).toBe(false);
+    const probe = vi
+      .spyOn(session, "getState")
+      .mockRejectedValueOnce(new Error("get_state timed out"));
     writeFileSync(join(dir, "start"), "go");
     await dispatch.consumed;
+    expect(probe).toHaveBeenCalledTimes(1);
     expect((await session.getState()).isStreaming).toBe(true);
     expect(settled).toBe(false);
+    expect(onDone).not.toHaveBeenCalled();
 
     const queued = session.prompt("queued follow-up");
     await expect(queued.settled).resolves.toBeNull();
@@ -141,10 +147,12 @@ it("settles handled commands and intercepted input without agent events", async 
       .toBe(false);
     expect(events).toContain("agent_start");
     expect(events).toContain("agent_end");
+    expect(onDone).not.toHaveBeenCalled();
   } finally {
     writeFileSync(join(dir, "start"), "go");
     writeFileSync(join(dir, "finish"), "go");
     await session.closeGracefully(1000);
+    vi.restoreAllMocks();
     vi.unstubAllEnvs();
     rmSync(dir, { recursive: true, force: true });
   }
