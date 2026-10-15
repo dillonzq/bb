@@ -197,6 +197,7 @@ describe("readHostFile (no ref — disk read)", () => {
     const rootPath = path.join(parentPath, "STATUS");
     const thrown = await captureReadHostRelativeFileError({
       type: "host.read_file_relative",
+      followRootSymlink: false,
       rootPath,
       path: "index.html",
       dotfiles: "deny",

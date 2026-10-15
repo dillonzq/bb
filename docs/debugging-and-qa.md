@@ -635,6 +635,12 @@ every hit. When the baseline reaches zero, delete it and the guard. See
 
 ## File Content Routes
 
+Skill detail reads and file listings resolve symlinked skill directories on
+their owning host. The server opts into `followRootSymlink` for
+`host.read_file_relative` and `host.list_files`; other callers pass `false`.
+Relative skill reads remain confined to the resolved directory and deny dotfiles,
+and listings skip nested symlinks. Linked skills remain read-only in bb.
+
 Clients read file bytes through path-shaped GET routes, which you can `curl`
 directly:
 
