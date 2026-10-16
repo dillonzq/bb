@@ -586,6 +586,9 @@ describe("workspace command dispatch", () => {
       code: "invalid_path",
     });
     await expect(read(".env")).rejects.toMatchObject({ code: "ENOENT" });
+
+    await fs.rm(skillRoot, { recursive: true });
+    await expect(read("SKILL.md")).rejects.toMatchObject({ code: "ENOENT" });
   });
 
   it("returns base64 for image files", async () => {

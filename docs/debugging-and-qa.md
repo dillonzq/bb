@@ -655,12 +655,6 @@ every hit. When the baseline reaches zero, delete it and the guard. See
 
 ## File Content Routes
 
-Skill detail reads and file listings resolve symlinked skill directories on
-their owning host. The server opts into `followRootSymlink` for
-`host.read_file_relative` and `host.list_files`; other callers pass `false`.
-Relative skill reads remain confined to the resolved directory and deny dotfiles,
-and listings skip nested symlinks. Linked skills remain read-only in bb.
-
 Clients read file bytes through path-shaped GET routes, which you can `curl`
 directly:
 
@@ -709,6 +703,12 @@ response. `If-None-Match` takes precedence over ranges. `If-Range` must match th
 strong ETag or Last-Modified value exactly; otherwise the full file is returned.
 HEAD returns full-file headers without reading the body. To check partial reads,
 use `curl -D - -H 'Range: bytes=0-1023' '<attachment-url>' -o /tmp/attachment-part`.
+
+Skill detail reads and file listings resolve symlinked skill directories on
+their owning host. The server opts into `followRootSymlink` for
+`host.read_file_relative` and `host.list_files`; other callers pass `false`.
+Relative skill reads remain confined to the resolved directory and deny dotfiles,
+and listings skip nested symlinks. Linked skills remain read-only in bb.
 
 ## Prepared Worktree Restarts
 

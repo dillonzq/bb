@@ -270,13 +270,9 @@ export async function readHostFileChunk(
 export async function readHostRelativeFile(
   command: CommandOf<"host.read_file_relative">,
 ): Promise<HostDaemonOnlineRpcResult<"host.read_file_relative">> {
-  if (!path.isAbsolute(command.rootPath)) {
-    throw new CommandDispatchError("invalid_path", "rootPath must be absolute");
-  }
   return readRootRelativeFileForTransport({
-    rootPath: command.followRootSymlink
-      ? await fs.realpath(command.rootPath)
-      : command.rootPath,
+    followRootSymlink: command.followRootSymlink,
+    rootPath: command.rootPath,
     relativePath: command.path,
     dotfiles: command.dotfiles,
   });
