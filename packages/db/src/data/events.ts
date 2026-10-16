@@ -2395,6 +2395,10 @@ export function listActiveBackgroundTaskCountsByThreadIds(
         json_extract(active_event.data, '$.item.skipTranscript'),
         0
       ) = 0
+      AND COALESCE(
+        json_extract(active_event.data, '$.item.foreground'),
+        0
+      ) = 0
     GROUP BY active_event.thread_id
     ORDER BY active_event.thread_id
   `);
@@ -3410,6 +3414,28 @@ export function listContextWindowUsageRows(
     eventType: "thread/contextWindowUsage/updated",
     contextWindowJsonPath: "$.contextWindowUsage.modelContextWindow",
   });
+}
+
+export function getLatestTokenUsageRow(
+  db: DbConnection,
+  args: ListContextWindowUsageRowsArgs,
+): StoredEventRow | null {
+  return (
+    db
+      .select(storedEventRowFields)
+      .from(events)
+      .where(
+        and(
+          eq(events.threadId, args.threadId),
+          gte(events.sequence, args.sequenceStart),
+          eq(events.type, "thread/tokenUsage/updated"),
+          isNotNestedTurnUsageEvent,
+        ),
+      )
+      .orderBy(desc(events.sequence))
+      .limit(1)
+      .get() ?? null
+  );
 }
 
 export function getLatestThreadOutputEventRow(

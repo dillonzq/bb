@@ -69,7 +69,7 @@ Before changing files, resolve these inputs from the user request:
 | Input                   | Default  | Notes                                                             |
 | ----------------------- | -------- | ----------------------------------------------------------------- |
 | Package                 | `bb-app` | This runbook does not publish other packages.                     |
-| Version bump            | `patch`  | Example: `0.0.1` to `0.0.2`.                                      |
+| Version bump            | `minor`  | Example: `0.46.0` to `0.47.0`. Use `patch` only when asked.       |
 | npm dist-tag            | `latest` | This is the tag plain `npx bb-app` uses.                          |
 | Allow prerelease latest | `false`  | Set to `true` only for an explicit prerelease-on-latest decision. |
 | Publish dry run         | `false`  | Use `true` only when testing the workflow itself.                 |
@@ -94,11 +94,13 @@ If any input is unclear, ask before bumping the version.
 
 3. Bump the lockstep release versions.
 
-   For the normal stable loop:
+   Prefer a minor release for the normal stable loop:
 
    ```bash
-   node scripts/bump-version.mjs --patch
+   node scripts/bump-version.mjs --minor
    ```
+
+   Use `--patch` only when the user asks for a patch release.
 
    When promoting from a prerelease to the first stable version, set the exact
    version instead:
