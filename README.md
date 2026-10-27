@@ -36,6 +36,7 @@ With the original intrinsic minimum sizing, the Environment frame expands to 24p
 - 59 focused app tests pass, including responsive overlays, provider icons, and ThreadMetadataContent.
 - Turbo lint and typecheck for app/shared-ui pass; app lint reports existing warnings in unrelated files.
 - The sidebar plugin was rebuilt through Turbo and reloaded in the isolated app before final browser checks. Reloading the core Vite module alone does not update the already built plugin copy.
+- Linux Playwright WebKit passes at 320, 390, and 430px touch widths and 1280px desktop width: aligned default metadata rows, correctly sized settings icon, an exposed/non-inert app root, and real navigation to project settings. DOM measurements are in webkit-mobile.json and webkit-desktop.json.
 - iOS Simulator Safari and the reporter's physical iPhone were unavailable. Linux Playwright WebKit is not iOS Safari verification.
 
 > AGENT GENERATED

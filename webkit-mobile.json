@@ -1,0 +1,512 @@
+[
+  {
+    "width": 320,
+    "rows": [
+      {
+        "label": "Parent",
+        "icon": {
+          "x": 16,
+          "y": 56,
+          "width": 16,
+          "height": 16,
+          "top": 56,
+          "right": 32,
+          "bottom": 72,
+          "left": 16
+        },
+        "text": {
+          "x": 38,
+          "y": 54,
+          "width": 42.859375,
+          "height": 20,
+          "top": 54,
+          "right": 80.859375,
+          "bottom": 74,
+          "left": 38
+        }
+      },
+      {
+        "label": "Project",
+        "icon": {
+          "x": 16,
+          "y": 86,
+          "width": 16,
+          "height": 16,
+          "top": 86,
+          "right": 32,
+          "bottom": 102,
+          "left": 16
+        },
+        "text": {
+          "x": 38,
+          "y": 84,
+          "width": 46.515625,
+          "height": 20,
+          "top": 84,
+          "right": 84.515625,
+          "bottom": 104,
+          "left": 38
+        }
+      },
+      {
+        "label": "Environment",
+        "icon": {
+          "x": 16,
+          "y": 116,
+          "width": 16,
+          "height": 16,
+          "top": 116,
+          "right": 32,
+          "bottom": 132,
+          "left": 16
+        },
+        "text": {
+          "x": 38,
+          "y": 114,
+          "width": 82.734375,
+          "height": 20,
+          "top": 114,
+          "right": 120.734375,
+          "bottom": 134,
+          "left": 38
+        }
+      },
+      {
+        "label": "Directory",
+        "icon": {
+          "x": 16,
+          "y": 146,
+          "width": 16,
+          "height": 16,
+          "top": 146,
+          "right": 32,
+          "bottom": 162,
+          "left": 16
+        },
+        "text": {
+          "x": 38,
+          "y": 144,
+          "width": 60.890625,
+          "height": 20,
+          "top": 144,
+          "right": 98.890625,
+          "bottom": 164,
+          "left": 38
+        }
+      },
+      {
+        "label": "Branch",
+        "icon": {
+          "x": 16,
+          "y": 176,
+          "width": 16,
+          "height": 16,
+          "top": 176,
+          "right": 32,
+          "bottom": 192,
+          "left": 16
+        },
+        "text": {
+          "x": 38,
+          "y": 174,
+          "width": 46.84375,
+          "height": 20,
+          "top": 174,
+          "right": 84.84375,
+          "bottom": 194,
+          "left": 38
+        }
+      },
+      {
+        "label": "Git status",
+        "icon": {
+          "x": 16,
+          "y": 206,
+          "width": 16,
+          "height": 16,
+          "top": 206,
+          "right": 32,
+          "bottom": 222,
+          "left": 16
+        },
+        "text": {
+          "x": 38,
+          "y": 204,
+          "width": 62.515625,
+          "height": 20,
+          "top": 204,
+          "right": 100.515625,
+          "bottom": 224,
+          "left": 38
+        }
+      }
+    ],
+    "menu": {
+      "tag": "A",
+      "href": "/settings/projects/proj_k3gheb78yz",
+      "bounds": {
+        "x": 9,
+        "y": 625,
+        "width": 302,
+        "height": 36,
+        "top": 625,
+        "right": 311,
+        "bottom": 661,
+        "left": 9
+      },
+      "icon": {
+        "x": 17,
+        "y": 635,
+        "width": 16,
+        "height": 16,
+        "top": 635,
+        "right": 33,
+        "bottom": 651,
+        "left": 17
+      },
+      "rootInert": false,
+      "rootHidden": null,
+      "navigation": "http://127.0.0.1:12329/settings/projects/proj_k3gheb78yz"
+    }
+  },
+  {
+    "width": 390,
+    "rows": [
+      {
+        "label": "Parent",
+        "icon": {
+          "x": 18.875,
+          "y": 56,
+          "width": 16,
+          "height": 16,
+          "top": 56,
+          "right": 34.875,
+          "bottom": 72,
+          "left": 18.875
+        },
+        "text": {
+          "x": 40.875,
+          "y": 54,
+          "width": 42.859375,
+          "height": 20,
+          "top": 54,
+          "right": 83.734375,
+          "bottom": 74,
+          "left": 40.875
+        }
+      },
+      {
+        "label": "Project",
+        "icon": {
+          "x": 18.875,
+          "y": 86,
+          "width": 16,
+          "height": 16,
+          "top": 86,
+          "right": 34.875,
+          "bottom": 102,
+          "left": 18.875
+        },
+        "text": {
+          "x": 40.875,
+          "y": 84,
+          "width": 46.515625,
+          "height": 20,
+          "top": 84,
+          "right": 87.390625,
+          "bottom": 104,
+          "left": 40.875
+        }
+      },
+      {
+        "label": "Environment",
+        "icon": {
+          "x": 18.875,
+          "y": 116,
+          "width": 16,
+          "height": 16,
+          "top": 116,
+          "right": 34.875,
+          "bottom": 132,
+          "left": 18.875
+        },
+        "text": {
+          "x": 40.875,
+          "y": 114,
+          "width": 82.734375,
+          "height": 20,
+          "top": 114,
+          "right": 123.609375,
+          "bottom": 134,
+          "left": 40.875
+        }
+      },
+      {
+        "label": "Directory",
+        "icon": {
+          "x": 18.875,
+          "y": 146,
+          "width": 16,
+          "height": 16,
+          "top": 146,
+          "right": 34.875,
+          "bottom": 162,
+          "left": 18.875
+        },
+        "text": {
+          "x": 40.875,
+          "y": 144,
+          "width": 60.890625,
+          "height": 20,
+          "top": 144,
+          "right": 101.765625,
+          "bottom": 164,
+          "left": 40.875
+        }
+      },
+      {
+        "label": "Branch",
+        "icon": {
+          "x": 18.875,
+          "y": 176,
+          "width": 16,
+          "height": 16,
+          "top": 176,
+          "right": 34.875,
+          "bottom": 192,
+          "left": 18.875
+        },
+        "text": {
+          "x": 40.875,
+          "y": 174,
+          "width": 46.84375,
+          "height": 20,
+          "top": 174,
+          "right": 87.71875,
+          "bottom": 194,
+          "left": 40.875
+        }
+      },
+      {
+        "label": "Git status",
+        "icon": {
+          "x": 18.875,
+          "y": 206,
+          "width": 16,
+          "height": 16,
+          "top": 206,
+          "right": 34.875,
+          "bottom": 222,
+          "left": 18.875
+        },
+        "text": {
+          "x": 40.875,
+          "y": 204,
+          "width": 62.515625,
+          "height": 20,
+          "top": 204,
+          "right": 103.390625,
+          "bottom": 224,
+          "left": 40.875
+        }
+      }
+    ],
+    "menu": {
+      "tag": "A",
+      "href": "/settings/projects/proj_k3gheb78yz",
+      "bounds": {
+        "x": 9,
+        "y": 625,
+        "width": 372,
+        "height": 36,
+        "top": 625,
+        "right": 381,
+        "bottom": 661,
+        "left": 9
+      },
+      "icon": {
+        "x": 17,
+        "y": 635,
+        "width": 16,
+        "height": 16,
+        "top": 635,
+        "right": 33,
+        "bottom": 651,
+        "left": 17
+      },
+      "rootInert": false,
+      "rootHidden": null,
+      "navigation": "http://127.0.0.1:12329/settings/projects/proj_k3gheb78yz"
+    }
+  },
+  {
+    "width": 430,
+    "rows": [
+      {
+        "label": "Parent",
+        "icon": {
+          "x": 17.84375,
+          "y": 56,
+          "width": 16,
+          "height": 16,
+          "top": 56,
+          "right": 33.84375,
+          "bottom": 72,
+          "left": 17.84375
+        },
+        "text": {
+          "x": 39.84375,
+          "y": 54,
+          "width": 42.859375,
+          "height": 20,
+          "top": 54,
+          "right": 82.703125,
+          "bottom": 74,
+          "left": 39.84375
+        }
+      },
+      {
+        "label": "Project",
+        "icon": {
+          "x": 17.84375,
+          "y": 86,
+          "width": 16,
+          "height": 16,
+          "top": 86,
+          "right": 33.84375,
+          "bottom": 102,
+          "left": 17.84375
+        },
+        "text": {
+          "x": 39.84375,
+          "y": 84,
+          "width": 46.515625,
+          "height": 20,
+          "top": 84,
+          "right": 86.359375,
+          "bottom": 104,
+          "left": 39.84375
+        }
+      },
+      {
+        "label": "Environment",
+        "icon": {
+          "x": 17.84375,
+          "y": 116,
+          "width": 16,
+          "height": 16,
+          "top": 116,
+          "right": 33.84375,
+          "bottom": 132,
+          "left": 17.84375
+        },
+        "text": {
+          "x": 39.84375,
+          "y": 114,
+          "width": 82.734375,
+          "height": 20,
+          "top": 114,
+          "right": 122.578125,
+          "bottom": 134,
+          "left": 39.84375
+        }
+      },
+      {
+        "label": "Directory",
+        "icon": {
+          "x": 17.84375,
+          "y": 146,
+          "width": 16,
+          "height": 16,
+          "top": 146,
+          "right": 33.84375,
+          "bottom": 162,
+          "left": 17.84375
+        },
+        "text": {
+          "x": 39.84375,
+          "y": 144,
+          "width": 60.890625,
+          "height": 20,
+          "top": 144,
+          "right": 100.734375,
+          "bottom": 164,
+          "left": 39.84375
+        }
+      },
+      {
+        "label": "Branch",
+        "icon": {
+          "x": 17.84375,
+          "y": 176,
+          "width": 16,
+          "height": 16,
+          "top": 176,
+          "right": 33.84375,
+          "bottom": 192,
+          "left": 17.84375
+        },
+        "text": {
+          "x": 39.84375,
+          "y": 174,
+          "width": 46.84375,
+          "height": 20,
+          "top": 174,
+          "right": 86.6875,
+          "bottom": 194,
+          "left": 39.84375
+        }
+      },
+      {
+        "label": "Git status",
+        "icon": {
+          "x": 17.84375,
+          "y": 206,
+          "width": 16,
+          "height": 16,
+          "top": 206,
+          "right": 33.84375,
+          "bottom": 222,
+          "left": 17.84375
+        },
+        "text": {
+          "x": 39.84375,
+          "y": 204,
+          "width": 62.515625,
+          "height": 20,
+          "top": 204,
+          "right": 102.359375,
+          "bottom": 224,
+          "left": 39.84375
+        }
+      }
+    ],
+    "menu": {
+      "tag": "A",
+      "href": "/settings/projects/proj_k3gheb78yz",
+      "bounds": {
+        "x": 9,
+        "y": 625,
+        "width": 412,
+        "height": 36,
+        "top": 625,
+        "right": 421,
+        "bottom": 661,
+        "left": 9
+      },
+      "icon": {
+        "x": 17,
+        "y": 635,
+        "width": 16,
+        "height": 16,
+        "top": 635,
+        "right": 33,
+        "bottom": 651,
+        "left": 17
+      },
+      "rootInert": false,
+      "rootHidden": null,
+      "navigation": "http://127.0.0.1:12329/settings/projects/proj_k3gheb78yz"
+    }
+  }
+]
