@@ -1,17 +1,18 @@
 import { renderHookStatically } from "@/test/render-hook-statically";
 import { describe, expect, it, vi } from "vitest";
 import type { ExperimentalLiveFileTarget } from "@get-bb/plugin-sdk";
-import {
-  usePanelFiles,
-  type PanelFileScope,
-} from "./usePanelFiles";
+import { usePanelFiles, type PanelFileScope } from "./usePanelFiles";
 import type { OpenSecondaryPanelTabRequest } from "./useThreadFileTabs";
 
 interface SurfaceCase {
   name: string;
   scope: PanelFileScope | null;
   accepts: Record<
-    "ownWorkspace" | "ownHost" | "ownStorage" | "otherWorkspace",
+    | "ownWorkspace"
+    | "ownHost"
+    | "hostOutsideWorkspace"
+    | "ownStorage"
+    | "otherWorkspace",
     boolean
   >;
 }
@@ -26,10 +27,16 @@ const OTHER_WORKSPACE: ExperimentalLiveFileTarget = {
   environmentId: "env_other",
   path: "src/a.ts",
 };
+const WORKSPACE_ROOT = { hostId: "host_1", path: "/work/repo" };
 const OWN_HOST: ExperimentalLiveFileTarget = {
   kind: "host",
   hostId: "host_1",
-  path: "/tmp/log.txt",
+  path: "/work/repo/src/log.txt",
+};
+const HOST_OUTSIDE_WORKSPACE: ExperimentalLiveFileTarget = {
+  kind: "host",
+  hostId: "host_1",
+  path: "/work/other/log.txt",
 };
 const OWN_STORAGE: ExperimentalLiveFileTarget = {
   kind: "thread-storage",
@@ -40,20 +47,64 @@ const OWN_STORAGE: ExperimentalLiveFileTarget = {
 const SURFACES: readonly SurfaceCase[] = [
   {
     name: "thread view",
-    scope: { threadId: "thr_1", environmentId: "env_1", hostId: "host_1" },
+    scope: {
+      threadId: "thr_1",
+      environmentId: "env_1",
+      hostId: "host_1",
+      workspaceRoot: null,
+    },
     accepts: {
       ownWorkspace: true,
       ownHost: true,
+      hostOutsideWorkspace: true,
       ownStorage: true,
       otherWorkspace: false,
     },
   },
   {
-    name: "New thread screen without a thread",
-    scope: { threadId: null, environmentId: "env_1", hostId: "host_1" },
+    name: "New thread screen reusing an environment",
+    scope: {
+      threadId: null,
+      environmentId: "env_1",
+      hostId: "host_1",
+      workspaceRoot: WORKSPACE_ROOT,
+    },
+    accepts: {
+      ownWorkspace: true,
+      ownHost: true,
+      hostOutsideWorkspace: false,
+      ownStorage: false,
+      otherWorkspace: false,
+    },
+  },
+  {
+    name: "New thread screen on the project folder",
+    scope: {
+      threadId: null,
+      environmentId: null,
+      hostId: null,
+      workspaceRoot: WORKSPACE_ROOT,
+    },
+    accepts: {
+      ownWorkspace: false,
+      ownHost: true,
+      hostOutsideWorkspace: false,
+      ownStorage: false,
+      otherWorkspace: false,
+    },
+  },
+  {
+    name: "New thread screen without a workspace folder",
+    scope: {
+      threadId: null,
+      environmentId: "env_1",
+      hostId: "host_1",
+      workspaceRoot: null,
+    },
     accepts: {
       ownWorkspace: true,
       ownHost: false,
+      hostOutsideWorkspace: false,
       ownStorage: false,
       otherWorkspace: false,
     },
@@ -64,6 +115,7 @@ const SURFACES: readonly SurfaceCase[] = [
     accepts: {
       ownWorkspace: true,
       ownHost: true,
+      hostOutsideWorkspace: true,
       ownStorage: true,
       otherWorkspace: true,
     },
@@ -85,6 +137,7 @@ describe.each(SURFACES)("panel files on the $name", (surface) => {
   it.each([
     ["ownWorkspace", OWN_WORKSPACE],
     ["ownHost", OWN_HOST],
+    ["hostOutsideWorkspace", HOST_OUTSIDE_WORKSPACE],
     ["ownStorage", OWN_STORAGE],
     ["otherWorkspace", OTHER_WORKSPACE],
   ] as const)("applies the surface rule to a %s target", (caseName, target) => {
@@ -100,7 +153,16 @@ describe.each(SURFACES)("panel files on the $name", (surface) => {
     if (!surface.accepts.ownHost) return;
     const { openTab, panelFiles } = renderSurface(surface);
     panelFiles.openFilePreview({ target: OWN_HOST, location: null });
-    panelFiles.openHostFile({ lineRange: null, path: OWN_HOST.path });
+    if (surface.scope?.threadId === null) {
+      panelFiles.openWorkspaceFile({
+        lineRange: null,
+        path: "src/log.txt",
+        source: { kind: "working-tree" },
+        statusLabel: null,
+      });
+    } else {
+      panelFiles.openHostFile({ lineRange: null, path: OWN_HOST.path });
+    }
 
     const [apiRequest, coreRequest] = openTab.mock.calls.map(
       ([request]) => request,
@@ -116,6 +178,7 @@ describe.each(SURFACES)("panel files on the $name", (surface) => {
     ["HEAD", { kind: "head" }],
     ["abc1234", { kind: "merge-base", ref: "abc1234" }],
   ] as const)("opens the %s revision as a read-only preview", (ref, source) => {
+    if (!surface.accepts.ownWorkspace) return;
     const { openTab, panelFiles } = renderSurface(surface);
     panelFiles.openFilePreview({
       target: { ...OWN_WORKSPACE, experimental_ref: ref },
@@ -148,6 +211,45 @@ describe.each(SURFACES)("panel files on the $name", (surface) => {
         location: null,
       }),
     ).toBe(false);
+    expect(openTab).not.toHaveBeenCalled();
+  });
+});
+
+describe("host files on the New thread screen", () => {
+  const surface = SURFACES[2]!;
+
+  it("opens them relative to the workspace folder with their location", () => {
+    const { openTab, panelFiles } = renderSurface(surface);
+    panelFiles.openFilePreview({
+      target: OWN_HOST,
+      location: { kind: "range", startLine: 3, endLine: 5 },
+    });
+
+    expect(openTab).toHaveBeenCalledWith(
+      {
+        kind: "workspace-file-preview",
+        tab: {
+          lineRange: { startLineNumber: 3, endLineNumber: 5 },
+          path: "src/log.txt",
+          source: { kind: "working-tree" },
+          statusLabel: null,
+        },
+      },
+      undefined,
+    );
+  });
+
+  it.each([
+    ["the workspace folder itself", { ...OWN_HOST, path: WORKSPACE_ROOT.path }],
+    [
+      "a sibling folder sharing its prefix",
+      { ...OWN_HOST, path: "/work/repository/a.ts" },
+    ],
+    ["another host", { ...OWN_HOST, hostId: "host_2" }],
+  ] as const)("declines %s", (_name, target) => {
+    const { openTab, panelFiles } = renderSurface(surface);
+
+    expect(panelFiles.openFilePreview({ target, location: null })).toBe(false);
     expect(openTab).not.toHaveBeenCalled();
   });
 });

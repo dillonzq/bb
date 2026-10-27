@@ -83,7 +83,10 @@ import {
   useTerminals,
 } from "@/hooks/queries/thread-terminal-queries";
 import { usePanelBrowser } from "@/components/secondary-panel/usePanelBrowser";
-import { usePanelFiles } from "@/components/secondary-panel/usePanelFiles";
+import {
+  usePanelFiles,
+  type PanelWorkspaceRoot,
+} from "@/components/secondary-panel/usePanelFiles";
 import { usePanelTerminals } from "@/components/secondary-panel/usePanelTerminals";
 import { useEnvironment } from "@/hooks/queries/environment-queries";
 import { useHostProviderCliStatus } from "@/hooks/queries/system-queries";
@@ -908,6 +911,30 @@ function RootComposeSurface({
     terminalTarget: rootPanelTerminalTarget,
     environmentStatus: rootPanelEnvironment?.status,
   });
+  const rootPanelWorkspaceRoot = useMemo<PanelWorkspaceRoot | null>(() => {
+    if (rootPanelEnvironmentId !== null) {
+      return rootPanelEnvironment?.path
+        ? {
+            hostId: rootPanelEnvironment.hostId,
+            path: rootPanelEnvironment.path,
+          }
+        : null;
+    }
+    if (isProjectless) return null;
+    const hostId = rootProjectHostId ?? primaryHostId;
+    if (hostId === null) return null;
+    const source = findLocalPathProjectSourceForHost(projectSources, hostId);
+    return source === undefined
+      ? null
+      : { hostId: source.hostId, path: source.path };
+  }, [
+    isProjectless,
+    primaryHostId,
+    projectSources,
+    rootPanelEnvironment,
+    rootPanelEnvironmentId,
+    rootProjectHostId,
+  ]);
   const panelFiles = usePanelFiles({
     available: true,
     openTab,
@@ -916,6 +943,7 @@ function RootComposeSurface({
       threadId: rootPanelThreadId,
       environmentId: rootPanelEnvironmentId,
       hostId: rootPanelEnvironment?.hostId ?? null,
+      workspaceRoot: rootPanelWorkspaceRoot,
     },
   });
   const openLiveFilePreview = panelFiles.openFilePreview;

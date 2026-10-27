@@ -192,7 +192,9 @@ className? }` —
   effects use
   `useBbNavigate().experimental_openFilePreview({ target, location })` or
   `.experimental_openFileExternally({ target, location })`; the boolean means
-  host acceptance, not completed I/O.
+  host acceptance, not completed I/O. The New thread screen previews a host
+  target only inside its workspace folder: the reused environment's checkout,
+  else the project's local folder.
   The `experimental_useCanOpenFileExternally(target)` hook is true when the
   target resolves on its host and this client has an external file target
   for it; it is false while loading and re-renders the component when it

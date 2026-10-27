@@ -1289,7 +1289,10 @@ loading, and the component re-renders when the answer changes.
 **Core callers.** `usePanelFiles` owns file opening on the thread view, New
 thread screen, and plugin page: core's workspace, host, and storage opens and
 `openFilePreview` build the same tab requests under one scope rule, which
-`usePanelFiles.test.tsx` checks against every surface. Links route through
+`usePanelFiles.test.tsx` checks against every surface. On the New thread
+screen, which has no thread, a host target inside the screen's workspace
+folder (the reused environment's checkout, else the project's local folder)
+opens as the workspace-relative tab its file search opens. Links route through
 `usePanelBrowser` on every surface. `useCanOpenFileExternally` is the only
 availability check for external opening: the file-link menu's Open
 externally item and the thread and New-thread file previews' Open in editor

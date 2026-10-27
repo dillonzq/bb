@@ -1,10 +1,12 @@
 import { useCallback } from "react";
 import {
   getEnvironmentFilePreviewSourceAtRef,
+  type FilePreviewLineRange,
   type HostFileTabState,
   type ThreadStorageFileTabState,
   type WorkspaceFileTabState,
 } from "@bb/client-core";
+import { getRelativeHostPath } from "@bb/domain";
 import type { AppFilePreviewIntent } from "@/lib/app-navigation-host";
 import {
   normalizeExperimentalFileOpenOptions,
@@ -13,10 +15,16 @@ import {
 import type { FileOpenerOverride } from "@/lib/plugin-slot-resolvers";
 import type { OpenSecondaryPanelTabRequest } from "./useThreadFileTabs";
 
+export interface PanelWorkspaceRoot {
+  hostId: string;
+  path: string;
+}
+
 export interface PanelFileScope {
   threadId: string | null;
   environmentId: string | null;
   hostId: string | null;
+  workspaceRoot: PanelWorkspaceRoot | null;
 }
 
 interface PanelFileOpenOptions {
@@ -47,6 +55,30 @@ export interface PanelFiles {
     file: WorkspaceFileTabState,
     options?: PanelFileOpenOptions,
   ) => void;
+}
+
+function workspaceRootFileRequest(
+  target: { hostId: string; path: string },
+  workspaceRoot: PanelWorkspaceRoot | null,
+  lineRange: FilePreviewLineRange | null,
+): OpenSecondaryPanelTabRequest | null {
+  if (workspaceRoot === null || target.hostId !== workspaceRoot.hostId) {
+    return null;
+  }
+  const path = getRelativeHostPath({
+    rootPath: workspaceRoot.path,
+    candidatePath: target.path,
+  });
+  if (path === null || path === "") return null;
+  return {
+    kind: "workspace-file-preview",
+    tab: {
+      lineRange,
+      path,
+      source: { kind: "working-tree" },
+      statusLabel: null,
+    },
+  };
 }
 
 function livePreviewRequest(
@@ -80,11 +112,10 @@ function livePreviewRequest(
           tab: { lineRange, path: target.path },
         };
       }
-      if (
-        scope.threadId === null ||
-        scope.environmentId === null ||
-        target.hostId !== scope.hostId
-      ) {
+      if (scope.threadId === null) {
+        return workspaceRootFileRequest(target, scope.workspaceRoot, lineRange);
+      }
+      if (scope.environmentId === null || target.hostId !== scope.hostId) {
         return null;
       }
       return {

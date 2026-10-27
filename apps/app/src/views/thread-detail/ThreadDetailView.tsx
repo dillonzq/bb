@@ -693,6 +693,7 @@ function ThreadDetailViewInternal(
       threadId: thread?.id ?? null,
       environmentId: thread?.environmentId ?? null,
       hostId: environment?.hostId ?? null,
+      workspaceRoot: null,
     },
   });
   const openLiveFilePreview = panelFiles.openFilePreview;
