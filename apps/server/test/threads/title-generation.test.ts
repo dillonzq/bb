@@ -4,6 +4,7 @@ import {
   collectInvokedPromptCommands,
   deriveForkTitle,
   deriveTitleFallback,
+  detectTaskLanguage,
   sanitizeGeneratedTitle,
   shouldGenerateThreadTitle,
 } from "../../src/services/threads/title-generation.js";
@@ -197,5 +198,21 @@ describe("deriveForkTitle", () => {
 
   it("leaves an untitled source without a fork title", () => {
     expect(deriveForkTitle({ title: null, titleFallback: null })).toBeNull();
+  });
+});
+
+describe("detectTaskLanguage", () => {
+  it.each([
+    ["确认一下bb cloud服务是否支持中文", "Chinese"],
+    ["請檢查 README.md 的翻譯", "Chinese"],
+    ["スレッドのタイトルを日本語で生成して", "Japanese"],
+    ["bb cloud の中文サポートを確認する", "Japanese"],
+    ["스레드 제목을 한국어로 생성해 주세요", "Korean"],
+    ["Fix the bug where 中文 titles break the sidebar", null],
+    ["Corrige le titre généré en français", null],
+    ["Исправь генерацию заголовков", null],
+    ["pnpm test", null],
+  ])("reads %s as %s", (text, language) => {
+    expect(detectTaskLanguage(text)).toBe(language);
   });
 });

@@ -1651,6 +1651,18 @@ export const publicApiRoutes = {
       request: noRequest<PathId>(),
       response: jsonResponse<ThreadResponse>(),
     }),
+    /**
+     * Generate a new title from the thread's first task message and its latest
+     * user messages, replacing the current title. The title is unchanged when
+     * no title service is available or generation fails, and the error says
+     * why.
+     */
+    regenerateTitle: defineRoute({
+      path: "/threads/:id/title/regenerate",
+      method: "post",
+      request: noRequest<PathId>(),
+      response: jsonResponse<ThreadResponse>(),
+    }),
     pinOrder: defineRoute({
       path: "/threads/:id/pin-order",
       method: "patch",

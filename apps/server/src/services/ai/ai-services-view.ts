@@ -105,7 +105,7 @@ function sampleFor(task: AiTextTask): {
       sanitize: sanitizeGeneratedCommitMessage,
     };
   }
-  const prompt = buildThreadTitlePrompt(SAMPLE_TITLE_INPUT);
+  const prompt = buildThreadTitlePrompt(SAMPLE_TITLE_INPUT, []);
   if (prompt === null) {
     throw new Error("The sample title prompt is empty");
   }
