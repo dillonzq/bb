@@ -52,6 +52,7 @@ import {
   makePluginRegistrationSet,
 } from "@/test/fixtures/plugins";
 import { LocationProbe } from "@/test/location-probe";
+import { pluginWorkspaceAtom } from "@/components/plugin/plugin-workspace-state";
 
 vi.mock("@/components/layout/AppLayout", () => ({
   AppLayout: ({ children }: { children: ReactNode }) => <>{children}</>,
@@ -760,6 +761,106 @@ describe("PluginDetail official catalog lifecycle", () => {
 });
 
 describe("BB Official plugin detail routing", () => {
+  it.each([
+    {
+      action: "Close other tabs",
+      target: "memory",
+      active: "memory",
+      remaining: ["memory"],
+      nextActive: "memory",
+    },
+    {
+      action: "Close other tabs",
+      target: "github",
+      active: "memory",
+      remaining: ["github"],
+      nextActive: "github",
+    },
+    {
+      action: "Close tabs to the right",
+      target: "automations",
+      active: "memory",
+      remaining: ["github", "automations"],
+      nextActive: "automations",
+    },
+    {
+      action: "Close tabs to the right",
+      target: "automations",
+      active: "github",
+      remaining: ["github", "automations"],
+      nextActive: "github",
+    },
+  ])(
+    "$action on $target with $active active persists every close and the surviving selection",
+    async ({ action, target, active, remaining, nextActive }) => {
+      const entries = ["github", "automations", "tasks", "memory"].map(
+        (id) => ({
+          ...GITHUB_CATALOG_ENTRY,
+          entryId: id,
+          pluginId: id,
+          displayName: id,
+          source: `builtin:${id}`,
+        }),
+      );
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async (input: RequestInfo | URL) => {
+          const url = String(input);
+          if (url === "/api/v1/plugins") {
+            return Response.json({ enabled: true, plugins: [] });
+          }
+          if (url.startsWith("/api/v1/plugin-catalog/search")) {
+            return Response.json({ results: entries, collections: [] });
+          }
+          return Response.json({ error: "not found" }, { status: 404 });
+        }),
+      );
+      const store = createStore();
+      store.set(pluginWorkspaceAtom, {
+        tabs: entries.map((entry) => entry.entryId),
+        activePluginId: active,
+      });
+      const { wrapper } = createQueryClientTestHarness();
+      render(
+        <Provider store={store}>
+          <CompactViewportOverrideProvider isCompactViewport={false}>
+            <MemoryRouter initialEntries={[`/plugins/${active}`]}>
+              <RoutedPluginsView />
+            </MemoryRouter>
+          </CompactViewportOverrideProvider>
+        </Provider>,
+        { wrapper },
+      );
+
+      fireEvent.contextMenu(
+        await screen.findByRole("button", { name: target }),
+      );
+      fireEvent.click(screen.getByRole("menuitem", { name: action }));
+
+      await waitFor(() => {
+        expect(store.get(pluginWorkspaceAtom)).toEqual({
+          tabs: remaining,
+          activePluginId: nextActive,
+        });
+        expect(screen.getByTestId("location").textContent).toBe(
+          `/plugins/${nextActive}`,
+        );
+      });
+      expect(
+        JSON.parse(
+          window.localStorage.getItem("bb.plugins.workspace.tabs") ?? "null",
+        ),
+      ).toEqual({ tabs: remaining, activePluginId: nextActive });
+      for (const entry of entries) {
+        expect(
+          screen.queryByRole("button", {
+            name: `Close ${entry.displayName}`,
+          }) !== null,
+        ).toBe(remaining.includes(entry.entryId));
+      }
+    },
+  );
+
   it.each([false, true])(
     "keeps official attribution and tabs through collection navigation (compact: %s)",
     async (compact) => {
