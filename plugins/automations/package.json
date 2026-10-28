@@ -12,7 +12,7 @@
     "name": "Automations",
     "description": "Schedule recurring and one-shot agent or script work.",
     "branding": {
-      "icon": "Repeat"
+      "icon": "Clock"
     },
     "server": "./src/server.ts",
     "app": "./app.tsx",

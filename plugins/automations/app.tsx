@@ -875,7 +875,7 @@ export default definePluginApp((app) => {
   app.slots.navPanel({
     id: "automations",
     title: "Automations",
-    icon: "Repeat",
+    icon: "Clock",
     path: PANEL_PATH,
     component: AutomationsPanel,
     experimental_usePageTitle: useAutomationsPageTitle,

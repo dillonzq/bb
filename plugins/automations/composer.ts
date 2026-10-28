@@ -36,7 +36,7 @@ export const composerCustomization: ComposerCustomization = {
     {
       id: "automation",
       label: "Automation",
-      icon: "Repeat",
+      icon: "Clock",
       run: ({ composer }) => composer.replace(withCreateAutomationPrompt),
     },
   ],
