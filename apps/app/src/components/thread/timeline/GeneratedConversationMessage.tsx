@@ -368,7 +368,7 @@ function generatedConversationIconName(
     case "agent-recipient":
       return "Sent";
     case "automation":
-      return "Clock";
+      return "Repeat";
     case "system":
       return systemMessageIconName(systemMessageKind);
   }

@@ -41,8 +41,7 @@ const USAGE: Partial<Record<IconName, string>> = {
   CircleX: "Auth callback failure state",
   ClosePluginPane: "Close a split pane containing a plugin surface",
   CloseThreadPane: "Close an existing or empty thread split pane",
-  Clock:
-    "Thread duration and timestamp affordances, Automations sidebar, plugin icon, prompt action, and automation timeline messages",
+  Clock: "Thread duration and timestamp affordances, automation prompt action",
   Code: "Right-panel source file visual, Mermaid source toggle",
   Columns2: "Git diff toolbar “split view”",
   Copy: "CopyButton, metadata-value copy buttons",
@@ -88,6 +87,7 @@ const USAGE: Partial<Record<IconName, string>> = {
   PinOff: "Unpin thread action",
   Plug02: "Plugins sidebar and prompt action",
   Plus: "New host button, new terminal button, “new branch” option in branch picker",
+  Repeat: "Automations sidebar and prompt action",
   RotateCcw:
     "Retry button when fetching timeline turn details fails, reset Mermaid diagram view",
   Rows2: "Git diff toolbar “unified view”",

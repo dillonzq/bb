@@ -157,7 +157,7 @@ describe("PromptBoxActionsMenu", () => {
         menuItems.map((item) =>
           item.querySelector("[data-icon]")?.getAttribute("data-icon"),
         ),
-      ).toEqual(["Zap", "ListTodo", "Clock", "Plug02"]);
+      ).toEqual(["Zap", "ListTodo", "Repeat", "Plug02"]);
     },
   );
 
