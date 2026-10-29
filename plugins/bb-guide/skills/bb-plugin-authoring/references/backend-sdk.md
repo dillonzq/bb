@@ -92,10 +92,11 @@ Prefer your own `bb.settings` and `bb.storage` over `sdk.system` and
 areas write app-wide state that the user owns.
 
 `threads.experimental_regenerateTitle({ threadId })` replaces a thread's title
-with one the thread-title AI service writes from its first task message and
-latest user messages, in the task's language: the thread menu's Regenerate
-title action. It rejects and keeps the title when no title service is
-available or generation fails.
+with one the thread-title AI service writes from its first task message,
+latest user messages, and the agent's latest replies, in the task's language:
+the thread menu's Regenerate title action. The service may keep the current
+title when it still fits. It rejects and keeps the title when no title service
+is available or generation fails.
 
 ```ts
 const thread = await bb.sdk.threads.spawn({

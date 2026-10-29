@@ -21,6 +21,7 @@ import { ApiError } from "../../errors.js";
 import { runTextAiTask, type AiTaskFailureReason } from "../ai/ai-tasks.js";
 import type { CommandResultSideEffectsDeps } from "../../internal/command-result-side-effects.js";
 import { parseStoredTurnRequestEvent } from "./thread-events.js";
+import { listLatestTurnFinalAgentReplies } from "./thread-data.js";
 import { syncThreadTitleToProvider } from "./thread-commands.js";
 
 const MIN_TITLE_GENERATION_WORDS = 5;
@@ -32,6 +33,8 @@ const MAX_BRANCH_SLUG_LENGTH = 48;
 const MAX_TITLE_TASK_WIDTH = 2000;
 const MAX_TITLE_FOLLOW_UP_WIDTH = 600;
 const TITLE_FOLLOW_UP_LIMIT = 8;
+const MAX_TITLE_AGENT_REPLY_WIDTH = 125;
+const TITLE_AGENT_REPLY_LIMIT = 32;
 
 interface ApplyGeneratedThreadTitleArgs {
   threadId: string;
@@ -182,117 +185,87 @@ export function sanitizeGeneratedBranchSlug(value: string): string | null {
   return slug.length > 0 ? slug : null;
 }
 
-interface ScriptLanguage {
-  language: string;
-  pattern: RegExp;
-}
-
-const LATIN_WORD_PATTERN = /^\p{Script=Latin}/u;
-const KANA_WORD_PATTERN = /^[\p{Script=Hiragana}\p{Script=Katakana}]/u;
-const HAN_WORD_PATTERN = /^\p{Script=Han}/u;
-
-const SCRIPT_LANGUAGES: readonly ScriptLanguage[] = [
-  { language: "Korean", pattern: /^\p{Script=Hangul}/u },
-  { language: "Thai", pattern: /^\p{Script=Thai}/u },
-  { language: "Greek", pattern: /^\p{Script=Greek}/u },
-  { language: "Hebrew", pattern: /^\p{Script=Hebrew}/u },
-  { language: "Armenian", pattern: /^\p{Script=Armenian}/u },
-  { language: "Georgian", pattern: /^\p{Script=Georgian}/u },
-];
-
-let titleWordSegmenter: Intl.Segmenter | null = null;
-
-function wordSegments(text: string): Intl.Segments {
-  titleWordSegmenter ??= new Intl.Segmenter("en", { granularity: "word" });
-  return titleWordSegmenter.segment(text);
-}
-
-function wordLanguage(word: string): string | null {
-  if (KANA_WORD_PATTERN.test(word)) {
-    return "Japanese";
-  }
-  if (HAN_WORD_PATTERN.test(word)) {
-    return "Chinese";
-  }
-  return (
-    SCRIPT_LANGUAGES.find((script) => script.pattern.test(word))?.language ??
-    null
-  );
-}
-
-export function detectTaskLanguage(text: string): string | null {
-  let latinWords = 0;
-  const languageWords = new Map<string, number>();
-  for (const segment of wordSegments(text)) {
-    if (!segment.isWordLike) {
-      continue;
-    }
-    if (LATIN_WORD_PATTERN.test(segment.segment)) {
-      latinWords += 1;
-      continue;
-    }
-    const language = wordLanguage(segment.segment);
-    if (language !== null) {
-      languageWords.set(language, (languageWords.get(language) ?? 0) + 1);
-    }
-  }
-  const kanaWords = languageWords.get("Japanese");
-  const hanWords = languageWords.get("Chinese");
-  if (kanaWords !== undefined && hanWords !== undefined) {
-    languageWords.set("Japanese", kanaWords + hanWords);
-    languageWords.delete("Chinese");
-  }
-  let dominant: { language: string; words: number } | null = null;
-  for (const [language, words] of languageWords) {
-    if (dominant === null || words > dominant.words) {
-      dominant = { language, words };
-    }
-  }
-  return dominant !== null && dominant.words > latinWords
-    ? dominant.language
-    : null;
-}
-
 function titlePromptText(input: PromptInput[]): string {
   const commands = collectInvokedPromptCommands(input);
   const body = promptTextWithoutCommands(input, commands);
   return body.length > 0 ? body : cleanPromptText(input);
 }
 
-function formatFollowUps(followUps: readonly PromptInput[][]): string | null {
-  const lines = followUps.flatMap((input) => {
-    const text = cleanPromptText(input);
-    return text.length > 0
-      ? [`- ${clampToWidth(text, MAX_TITLE_FOLLOW_UP_WIDTH)}`]
+function formatListItems(
+  texts: readonly string[],
+  maxWidth: number,
+): string | null {
+  const lines = texts.flatMap((text) => {
+    const normalized = text.replace(/\s+/gu, " ").trim();
+    return normalized.length > 0
+      ? [`- ${clampToWidth(normalized, maxWidth)}`]
       : [];
   });
   return lines.length > 0 ? lines.join("\n") : null;
 }
 
-export function buildThreadTitlePrompt(
+interface ThreadTitlePromptContext {
+  agentReplies: string | null;
+  currentTitle: string | null;
+  followUps: string | null;
+}
+
+function renderThreadTitlePrompt(
   input: PromptInput[],
-  followUps: readonly PromptInput[][],
+  context: ThreadTitlePromptContext,
 ): string | null {
-  const text = cleanPromptText(input);
-  if (!text) {
+  if (!cleanPromptText(input)) {
     return null;
   }
   const commands = collectInvokedPromptCommands(input);
-  const taskText = titlePromptText(input);
-  const followUpText = formatFollowUps(followUps);
-  const taskLanguage = detectTaskLanguage(
-    [taskText, ...followUps.map(cleanPromptText)].join(" "),
-  );
+  const hasLaterMessages =
+    context.followUps !== null || context.agentReplies !== null;
   return renderTemplate("generateThreadMetadata", {
     cleanedPrompt: clampToWidth(
-      taskText,
-      followUpText === null ? MAX_TITLE_PROMPT_WIDTH : MAX_TITLE_TASK_WIDTH,
+      titlePromptText(input),
+      hasLaterMessages ? MAX_TITLE_TASK_WIDTH : MAX_TITLE_PROMPT_WIDTH,
     ),
     ...(commands.length > 0
       ? { invokedCommands: formatInvokedCommands(commands) }
       : {}),
-    ...(followUpText === null ? {} : { followUps: followUpText }),
-    ...(taskLanguage === null ? {} : { taskLanguage }),
+    ...(context.followUps === null ? {} : { followUps: context.followUps }),
+    ...(context.agentReplies === null
+      ? {}
+      : { agentReplies: context.agentReplies }),
+    ...(context.currentTitle === null
+      ? {}
+      : { currentTitle: context.currentTitle }),
+  });
+}
+
+export function buildThreadTitlePrompt(input: PromptInput[]): string | null {
+  return renderThreadTitlePrompt(input, {
+    agentReplies: null,
+    currentTitle: null,
+    followUps: null,
+  });
+}
+
+interface ThreadTitleRegenerationContext {
+  agentReplies: string[];
+  currentTitle: string | null;
+  followUps: PromptInput[][];
+  task: PromptInput[];
+}
+
+function buildThreadTitleRegenerationPrompt(
+  context: ThreadTitleRegenerationContext,
+): string | null {
+  return renderThreadTitlePrompt(context.task, {
+    agentReplies: formatListItems(
+      context.agentReplies,
+      MAX_TITLE_AGENT_REPLY_WIDTH,
+    ),
+    currentTitle: context.currentTitle,
+    followUps: formatListItems(
+      context.followUps.map(cleanPromptText),
+      MAX_TITLE_FOLLOW_UP_WIDTH,
+    ),
   });
 }
 
@@ -310,7 +283,7 @@ export async function generateThreadMetadataWithOutcome(
     ...(reason ? { reason } : {}),
   });
 
-  const prompt = buildThreadTitlePrompt(args.input, []);
+  const prompt = buildThreadTitlePrompt(args.input);
   if (prompt === null) {
     return complete(null, "empty-input");
   }
@@ -360,24 +333,19 @@ export function applyGeneratedThreadTitle(
 }
 
 interface RegenerateThreadTitleArgs {
-  threadId: string;
-}
-
-interface ThreadTitleContext {
-  followUps: PromptInput[][];
-  task: PromptInput[];
+  thread: Thread;
 }
 
 function visiblePromptInput(input: PromptInput[]): PromptInput[] {
   return input.filter((part) => part.visibility !== "agent-only");
 }
 
-function loadThreadTitleContext(
+function loadThreadTitleRegenerationContext(
   deps: Pick<AppDeps, "db">,
-  threadId: string,
-): ThreadTitleContext | null {
+  thread: Thread,
+): ThreadTitleRegenerationContext | null {
   const [taskRow] = listStoredTaskTurnRequestEvents(deps.db, {
-    threadId,
+    threadId: thread.id,
     order: "oldest",
     limit: 1,
   });
@@ -385,16 +353,22 @@ function loadThreadTitleContext(
     return null;
   }
   const followUps = listStoredTaskTurnRequestEvents(deps.db, {
-    threadId,
+    threadId: thread.id,
     order: "newest",
     limit: TITLE_FOLLOW_UP_LIMIT,
   })
     .filter((row) => row.sequence !== taskRow.sequence)
     .reverse()
     .map((row) => visiblePromptInput(parseStoredTurnRequestEvent(row).input));
+  const agentReplies = listLatestTurnFinalAgentReplies(deps.db, {
+    threadId: thread.id,
+    limit: TITLE_AGENT_REPLY_LIMIT,
+  }).reverse();
   return {
-    task: visiblePromptInput(parseStoredTurnRequestEvent(taskRow).input),
+    agentReplies,
+    currentTitle: thread.title,
     followUps,
+    task: visiblePromptInput(parseStoredTurnRequestEvent(taskRow).input),
   };
 }
 
@@ -420,11 +394,9 @@ export async function regenerateThreadTitle(
   deps: CommandResultSideEffectsDeps,
   args: RegenerateThreadTitleArgs,
 ): Promise<Thread> {
-  const context = loadThreadTitleContext(deps, args.threadId);
+  const context = loadThreadTitleRegenerationContext(deps, args.thread);
   const prompt =
-    context === null
-      ? null
-      : buildThreadTitlePrompt(context.task, context.followUps);
+    context === null ? null : buildThreadTitleRegenerationPrompt(context);
   if (prompt === null) {
     throw new ApiError(
       409,
@@ -435,7 +407,7 @@ export async function regenerateThreadTitle(
   const outcome = await runTextAiTask(deps, {
     task: "thread-title",
     label: "Thread title regeneration",
-    logContext: { threadId: args.threadId },
+    logContext: { threadId: args.thread.id },
     prompt,
   });
   if (!outcome.ok) {
@@ -448,7 +420,10 @@ export async function regenerateThreadTitle(
       `${outcome.service.displayName} returned an empty title`,
     );
   }
-  const thread = updateThread(deps.db, deps.hub, args.threadId, { title });
+  if (title === args.thread.title) {
+    return args.thread;
+  }
+  const thread = updateThread(deps.db, deps.hub, args.thread.id, { title });
   if (thread === null) {
     throw new ApiError(404, "thread_not_found", "Thread not found");
   }

@@ -312,6 +312,7 @@ export {
   getStoredProviderSession,
   getLastStoredTurnRequestEvent,
   listStoredTaskTurnRequestEvents,
+  listLatestTurnFinalAgentMessageEventRows,
   getStoredTurnRequestEventForTurn,
   getLatestThreadOutputEventRow,
   getLatestStoredConversationOutlineSequence,

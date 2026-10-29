@@ -3578,6 +3578,40 @@ export function getLatestThreadOutputEventRow(
   );
 }
 
+interface ListLatestTurnFinalAgentMessageEventRowsArgs {
+  limit: number;
+  threadId: string;
+}
+
+export function listLatestTurnFinalAgentMessageEventRows(
+  db: DbConnection,
+  args: ListLatestTurnFinalAgentMessageEventRowsArgs,
+): StoredEventRow[] {
+  return db
+    .select(storedEventRowFields)
+    .from(events)
+    .where(
+      sql`${events.threadId} = ${args.threadId}
+      AND ${events.type} = 'item/completed'
+      AND ${events.itemKind} = 'agentMessage'
+      AND ${events.parentToolCallId} IS NULL
+      AND COALESCE(json_extract(${events.data}, '$.item.text'), '') <> ''
+      AND NOT EXISTS (
+        SELECT 1
+        FROM events AS later_reply
+        WHERE later_reply.thread_id = ${events.threadId}
+          AND later_reply.turn_id = ${events.turnId}
+          AND later_reply.type = 'item/completed'
+          AND later_reply.item_kind = 'agentMessage'
+          AND later_reply.parent_tool_call_id IS NULL
+          AND later_reply.sequence > ${events.sequence}
+      )`,
+    )
+    .orderBy(desc(events.sequence))
+    .limit(args.limit)
+    .all();
+}
+
 export function getLatestThreadSystemErrorEventRow(
   db: DbConnection,
   args: GetLatestThreadSystemErrorEventRowArgs,

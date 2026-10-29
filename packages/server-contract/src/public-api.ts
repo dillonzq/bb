@@ -1652,10 +1652,10 @@ export const publicApiRoutes = {
       response: jsonResponse<ThreadResponse>(),
     }),
     /**
-     * Generate a new title from the thread's first task message and its latest
-     * user messages, replacing the current title. The title is unchanged when
-     * no title service is available or generation fails, and the error says
-     * why.
+     * Generate a new title from the thread's first task message, its latest
+     * user messages, and the agent's latest replies, replacing the current
+     * title unless it still fits. The title is unchanged when no title service
+     * is available or generation fails, and the error says why.
      */
     regenerateTitle: defineRoute({
       path: "/threads/:id/title/regenerate",

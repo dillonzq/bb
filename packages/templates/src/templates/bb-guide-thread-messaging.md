@@ -74,10 +74,11 @@ Ownership:
     --self                                 Target current thread
 
   regenerate-title asks the thread-title AI service (Settings → AI services)
-  for a title built from the thread's first task message and its latest user
-  messages, written in the task's language, and replaces the current title,
-  including one set by hand. The title is kept when no service is available or
-  generation fails, and the error says why. bb never regenerates on its own.
+  for a title built from the thread's first task message, its latest user
+  messages, and the agent's latest replies, written in the task's language. It
+  replaces the current title, including one set by hand, unless that title
+  still fits. The title is kept when no service is available or generation
+  fails, and the error says why. bb never regenerates on its own.
   SDK: `threads.experimental_regenerateTitle({ threadId })`.
 
   bb thread read [id]                      Mark read

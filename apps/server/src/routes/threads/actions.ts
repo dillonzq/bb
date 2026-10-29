@@ -533,9 +533,8 @@ export function registerThreadActionRoutes(app: Hono, deps: AppDeps): void {
   });
 
   post(routes.regenerateTitle, async (context) => {
-    const publicThread = requirePublicThread(deps.db, context.req.param("id"));
     const thread = await regenerateThreadTitle(deps, {
-      threadId: publicThread.id,
+      thread: requirePublicThread(deps.db, context.req.param("id")),
     });
     return context.json(toThreadResponseFromThread(deps, { thread }));
   });

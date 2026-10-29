@@ -672,10 +672,11 @@ export interface ThreadsArea {
     args: ThreadCascadeListArgs,
   ): Promise<ThreadCascadeListResult>;
   /**
-   * Generate a new title from the thread's first task message and its latest
-   * user messages, in the task's language, and replace the current title. The
-   * title is kept when no title service is available or generation fails, and
-   * the call rejects with the reason. Experimental: see docs/api_to_audit.md.
+   * Generate a new title from the thread's first task message, its latest user
+   * messages, and the agent's latest replies, in the task's language. The
+   * current title is kept when it still fits, when no title service is
+   * available, or when generation fails, and the call rejects with the reason
+   * on failure. Experimental: see docs/api_to_audit.md.
    */
   experimental_regenerateTitle(
     args: ThreadActionArgs,
