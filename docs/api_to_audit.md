@@ -29,6 +29,29 @@ Before stabilization, verify consent and revoke flows on all supported native
 platforms, per-origin scope, old-client launch errors, and storage recovery. Core
 callers are `ApplicationLinkApprovalsSettings` and the URL confirmation dispatcher.
 
+## Server list (`experimental_useServers`, `@get-bb/plugin-sdk/app`)
+
+`experimental_useServers()` returns `{ status, servers, switchTo }` on bb Desktop and
+the mobile app, and null in a web browser, whose server list would be scoped to
+one origin. Each `ExperimentalServer` has an `id`, `name`, `origin` (scheme,
+host and port only; desktop custom URLs can embed login details and paths),
+`kind` (`local`, `account` or `custom`) and `active`. On desktop, `status` is
+`loading` with no servers until the main process answers; the mobile app
+injects its list with the bridge handshake, so it starts `ready`. Both then
+push changes, and a change that arrives during a read wins over the read. `switchTo(id)` reloads the client on that server, unloading every
+plugin; it ignores the active server and unknown ids. Core's command palette
+server switcher uses the same `useServerChoices` implementation, so the mobile
+app now offers the switcher too. Desktop pages served by an older desktop
+release get null until it updates. Plugins can't add, edit, rename or remove
+servers, and can't call another server. The list lives in the client, so the
+`bb` CLI has no server list to reach and no command.
+
+Docs: Plugin Guide, Sidebar footer items (`plugins/plugin-api-docs/src/surfaces.ts`).
+Before stabilization, find a plugin caller beyond core's palette, decide
+whether desktop custom-server ids should survive a URL edit (they hash the
+URL today), and verify switching on iOS, Android and desktop with account and
+custom servers, including a mobile route pinned to a profile by a deep link.
+
 ## Composer popups
 
 `ComposerCustomization.experimental_popups` registers `{ id, label, component }`
@@ -185,6 +208,48 @@ provider. Omitting it keeps the section on the plugin's configuration page.
 Stabilization requires verifying placement isolation, plugin
 disable/uninstall, loading and failure states, and pairing lifecycle on
 Mobile.
+
+## `app.slots.experimental_messageMetadata` (`@get-bb/plugin-sdk/app`)
+
+Requires SDK 0.6.98.
+
+`app.slots.experimental_messageMetadata({ id, placement?, component })` mounts
+React metadata beside realized user and assistant conversation messages,
+including windowing overscan and embedded ThreadChat timelines. `placement`
+accepts "above" or "actionRow"; omission defaults to "above". "above" renders
+over the message, aligned to its side. "actionRow" renders in the message's
+action row and shows and hides with the actions: on hover or focus where the
+device can hover, and always where it cannot. It sits before the actions on
+user messages and after the overflow menu on assistant messages, and extends
+into the space beside the message rather than narrowing the actions. Device
+policy belongs to the component: bb's own inline time returns null on touch
+devices, which keep the time in the overflow menu footer. The component
+receives `{ message }` with `id`, `threadId`, `role`, exact `createdAt` in Unix
+milliseconds, and `turnId` (null outside a turn). User messages also expose
+`initiator: "user" | "agent" | "system"`; assistant messages do not. Message
+text and source sequence numbers are excluded, so streaming text does not
+invalidate metadata props. Types: `ExperimentalMessageMetadataRegistration`,
+`ExperimentalMessageMetadataPlacement`, `ExperimentalMessageMetadataProps`, and
+`ExperimentalMessageMetadataContext`.
+
+Components inspect `message.role` and return null to skip a message.
+
+BB supplies plugin context, CSS, muted typography, alignment, and ordering: bb's
+own contributions first, then plugin id, then registration order. Each plugin
+contribution has its own error boundary and empty suspense fallback. Plugin
+hooks can fetch or subscribe to data; use shared query caches rather than one
+request per message. Components unmount when their messages are no longer
+realized or the registration is removed. Plugin effects own their cleanup
+and time-based refreshes; BB adds no timer, text length limits, or server calls.
+
+Core caller: the inline message time in the hover action row
+(`apps/app/src/components/thread/timeline/core-message-metadata.tsx`) registers
+through this slot with `placement: "actionRow"` and renders through the same
+`MessageMetadata` host as plugin contributions.
+
+Before stabilizing, audit compact and embedded placement, variable-height
+metadata and scroll anchoring, unmount cleanup, asynchronous updates,
+origin filtering, and render isolation during streaming and across messages.
 
 ## `app.commands.register`
 
@@ -1054,6 +1119,28 @@ Docs: `backend-sdk.md`.
    should be retired in its favor.
 3. **Actions.** Confirm `archive` and `delete` are the only cascading
    actions worth previewing.
+
+## `bb.sdk.threads.experimental_regenerateTitle`
+
+`POST /threads/:id/title/regenerate` asks the thread-title AI service for a new
+title built from the thread's first task message, up to eight of its latest
+user messages, and the first 125 columns of the agent's final reply in each of
+its latest thirty-two turns, in the task's language. The prompt includes the
+current title so the service can keep it; a changed title replaces the current
+one and syncs to providers that support renaming, like a manual rename. When
+no title service is available, generation fails, or the thread has no task
+message, the call fails with the reason and the title is unchanged. Core
+callers: the thread menu's Regenerate title action and
+`bb thread regenerate-title`.
+
+Docs: `backend-sdk.md`, `bb guide thread-messaging`.
+
+**Audit before stabilizing.**
+
+1. **Context.** Subagent replies, queued messages, and attachments are not
+   sent; decide whether any of them should inform the title.
+2. **Result shape.** The call returns the updated thread; decide whether callers
+   need the generating service or a preview that does not apply the title.
 
 ## `PluginSettingDescriptor.experimental_optionLabels`
 
@@ -2046,7 +2133,15 @@ Docs: `frontend-hooks-and-ui.md`.
 
 Returns the remappable answer shortcuts bb binds while a pending interaction is
 open, keyed by option index, and `registerChoiceHandler` for a chosen index.
-Outside a pending interaction the map is empty and handlers never run.
+`actionShortcuts` and `registerActionHandler` do the same for the form actions
+`submit`, `previous`, `next`, and `cancel` (`question.submit`,
+`question.previous`, `question.next`, `question.cancel`); action shortcuts also
+fire from text fields inside an element marked `data-question-form`. Core's
+card uses `actionShortcuts` only for `aria-keyshortcuts` and shows no action
+shortcut labels.
+Core's own question card (`@bb/shared-ui/question-form`, rendered by
+`UserQuestionAnswerForm`) reads the same host through `ThreadQuestionFormHost`.
+Outside a pending interaction the maps are empty and handlers never run.
 
 Docs: `frontend-hooks-and-ui.md`.
 
@@ -2056,7 +2151,10 @@ Docs: `frontend-hooks-and-ui.md`.
    `PluginPendingInteractionProps` instead of a hook any component can call.
 2. **Scope.** Only pending interactions bind the shortcuts. Confirm no other
    surface (a message action form, a panel) should get them.
-3. **Consumer count.** Two first-party consumers (Ask User Question, pi's
+3. **Focus marker.** Action shortcuts reach a form's text fields only through
+   the `data-question-form` attribute. Decide whether a ref or wrapper
+   component should replace the attribute before the prefix drops.
+4. **Consumer count.** Two first-party consumers (Ask User Question, pi's
    extension dialogs). Confirm a third-party form needs it before the prefix
    drops.
 
@@ -2703,6 +2801,93 @@ Docs: `frontend-registration.md`, `frontend-components.md`.
 4. **Separators.** The Info tab draws section separators on every
    `[data-info-section]`, so a section that renders without
    `experimental_InfoSection` gets no separator. Confirm that is acceptable.
+
+## `app.slots.experimental_threadContextCardRow` / `app.slots.experimental_threadContextCardSection` / `experimental_ThreadContextCardRow` / `experimental_useThreadContextKind` (`@get-bb/plugin-sdk/app`)
+
+A thread pane shows its thread context one of two ways, its
+`ExperimentalThreadContextKind`: `banner`, the context row above the composer,
+or `card`, the thread context card at the pane's upper-right.
+`experimental_useThreadContextKind()` returns the kind of the pane the calling
+component renders in, `banner` outside a thread pane. A pane is `card` while
+the `threadContextCard` experiment is on, for a thread opened as a page,
+except on phones (a compact viewport with a coarse pointer, the rule
+`MessageActionBar` uses). Threads shown inside a panel or as a transcript are
+`banner`: `ThreadScreen` wraps those presentations in
+`WithoutThreadContextCard`.
+
+The card's counterparts of the Info tab's row and section slots. A row
+registration is `{ id, group, order?, component }` and draws in the card's top
+block; a section is `{ id, title, group, order?, component }` and draws below
+the rows. Components receive
+`{ threadId, projectId, environment }` (`environment` is `{ id }` from the
+thread, null only without one) and render `experimental_ThreadContextCardRow`
+rows (`{ icon?, leading?, label, trailing?, title?, disabled?, onClick?,
+action? }`), or null; `action` is a second control beside the main one, such
+as a menu.
+
+`ThreadDetailView` wraps each thread page and split pane in
+`ThreadContextCardProvider`
+(`apps/app/src/components/plugin/PluginThreadContextCard.tsx`), enabled only
+where the pane's kind is `card`. Rows and sections each merge bb's with plugin
+registrations and sort by `group`, `order` (unset last), then
+registration order with core first on a tie. Rows share one block with no
+heading; sections follow, each under its title and a divider. Every plugin
+row and section mounts in its own crash boundary keyed by thread, and CSS `:has` hides a
+block whose components render no element. `ThreadContextCard` sits in
+`ThreadScreen`'s scroll overlay, sibling to the scroll viewport, and measures
+the overlay: `gutter` when the card fits beside the 760px transcript column,
+`shift` when padding the scroll content by the card's width keeps the column
+whole, `overlay` otherwise. While `threadContextCard.pinned` (a synced UI
+preference, default true) is on, gutter and shift show the card in the pane
+and shift pads the transcript; the header button
+(`ThreadContextCardHeaderButton`) toggles the pin. In overlay the header
+button opens the same content in the shared Popover, which is the shared
+bottom drawer in a compact viewport. Unpinning or closing the popover does not
+change the pane's kind.
+
+Context segments render in both kinds, so a plugin that has not added a card
+row or section keeps its segment above the composer. A segment whose content is also a
+card row or section hides itself in `useVisible` while the kind is `card`.
+
+**Core callers.** bb's parent row (thread group) and its Child threads section
+(related group) are `CORE_THREAD_CONTEXT_CARD_ROWS` and
+`CORE_THREAD_CONTEXT_CARD_SECTIONS` in
+`apps/app/src/views/thread-detail/ThreadContextCardCore.tsx`, drawn with
+`ThreadContextCardRow`, the component behind `experimental_ThreadContextCardRow`.
+bb's parent segment hides through `useThreadContextKind`, the function behind
+`experimental_useThreadContextKind`. The Git plugin registers its `changes`
+row (full `+N −M` counts; it opens the Diff tab, where the merge base is
+picked) and GitHub PR Status its `pull-request` row (the banner's own label,
+`PullRequestSummaryLabel`, after the GitHub icon that carries the checks,
+opening the pull request; its `…` menu opens GitHub, copies the link, merges,
+and marks it ready or draft, at the card's width, flush with its edges); both
+hide their segments with `experimental_useThreadContextKind`. A row's `action`
+replaces its `trailing` while the row is hovered or focused or the action's
+menu is open, and always shows on touch screens. Contract tests:
+`PluginThreadContextCard.test.tsx` and
+`ThreadPromptContextBanner.segments.test.tsx`.
+
+Docs: `frontend-thread-context-card.md`, `frontend-registration.md`,
+`frontend-hooks-and-ui.md`, `frontend-components.md`, `docs/configuration.md`
+(experiment and preference).
+
+**Audit before stabilizing.**
+
+1. **Kinds.** Confirm `banner | card` covers the presentations bb plans, and
+   that a pane's kind should not follow the pin or the popover.
+2. **Context segments.** Decide whether `experimental_threadContextSegment`
+   becomes the banner's slot under a matching name once the card stabilizes,
+   and whether unmigrated segments should keep showing in card panes.
+3. **Shift.** Pinning or unpinning in a medium pane moves the transcript
+   sideways. Confirm that is acceptable or reserve the space permanently.
+4. **Row actions.** `action` takes any node; GitHub PR Status builds its own
+   `…` menu from shared tokens. Decide whether bb ships the menu as a
+   component, and whether menus should open beside the card instead of below.
+5. **Emptiness.** When every row and section renders nothing for a thread, the card
+   shows an empty state ("Nothing to show yet") instead of hiding, so the
+   header button and the transcript's position do not depend on the thread.
+6. **Groups.** Rows and sections reuse the Info tab's groups. Confirm the two surfaces
+   should share one group vocabulary.
 
 ## `app.slots.experimental_threadRowMetadata` / `experimental_ThreadRowMetadata` (`@get-bb/plugin-sdk/app`)
 
@@ -3880,6 +4065,13 @@ own value, so plugins built against the old constant keep working.
   One behaviour narrows: an action tab's or New-thread action's own `ctx.openPanel()` now resolves through the launching surface's registered tabs instead of opening its action directly, so it declines if the action was hidden or unregistered while `run` awaited. The other retired members already resolved against registered tabs. Survey of the 342 bb-community source repositories (shallow clones, 2026-10-26, production sources): `openPanel(` 102 call sites in 47 repos, `openThreadPanel(` 111 in 55, `experimental_openTab(` 3 in 2, `openFixedTab(` 11 in 8. Three repos self-open after an `await` in `run` (bb-plugin-crew, bb-wterm-terminal-plugin, bb-plugin-feed), all through the legacy `threadPanelAction`, which has no `useVisible`; the one tab with `useVisible` (shuttle) self-opens synchronously from its visible launcher. No caller relies on opening an unregistered or hidden action. In-repo callers (side-chat, tasks, workflows, docs, the ThreadChat demo) moved to the controller.
 
 - **Stabilization:** audit focus resolution for commands and thread actions across split panes and plugin pages, `toggleTab` against compact drawers and plugin-detail overlays, `close()` acceptance when the panel is already closed, and whether a nav-panel action reference should resolve on thread surfaces. Remove the retired shims after published callers migrate, then rename project-wide and remove this entry.
+
+## Open panel tabs (`experimental_usePanelTabs`, `ExperimentalPanelController.getTabs`/`selectTab`/`closeTab`, `experimental_PanelTabIcon`)
+
+- **Surface:** `experimental_usePanelTabs(): ExperimentalPanelTabs` returns `{ open, selectedKey, tabs }` for the side panel of the surface the component renders in, following live changes. Each `ExperimentalPanelTab` is `{ key, title, status, closable, detail }`; `ExperimentalPanelTabDetail` is `info`, `file` (`path`), `browser` (`url`), `terminal` (`terminalId`), `new-tab`, `plugin` (`pluginId`, the tab's `ExperimentalTabReference`, action `params`) or `plugin-details` (`pluginId`). `ExperimentalPanelController.getTabs()` returns the same list once, for commands, thread actions and other non-component callers (from the focused surface for commands). `selectTab(key)` and `closeTab(key)` act on any listed tab and return false for a key that is not open (and `closeTab` for a tab without a close button). `experimental_PanelTabIcon({ tabKey })` draws the strip's icon for a key. The testing harness takes `experimental_panelTabs` and logs `selectTab`/`closeTab` in `experimental_panelCalls`; `@get-bb/plugin-sdk/testing` exports `experimental_makePanelController(overrides?)`, a controller that declines every call except the overrides, for tests that run a command or action directly.
+- **Behavior:** the list is the tab strip's, in its order: fixed tabs (Info, plugin fixed and page tabs), then content tabs. `title`, `status` and `closable` are what the strip shows; `selectTab` and `closeTab` call the strip's own `onSelect`/`onClose`, so closing a terminal ends it and selecting reveals the panel (the compact drawer on phones). Plugin components re-render only when the listed data changes. Keys are the core tab ids and are documented as valid only while the tab is open. A surface without a side panel reports a closed, empty list.
+- **Core callers:** every surface builds its strip from `usePanelTabPresenter` (`apps/app/src/components/secondary-panel/usePanelTabPresenter.tsx`) and renders `AppPanelTabsPublisher` (`apps/app/src/lib/app-panel-tabs.tsx`) with the same tab objects it hands `ThreadSecondaryPanel`: `ThreadDetailView`, `RootComposeView`, `PluginPanelRightPanelHost`, and the Plugins browse page (`PluginsView`, which now has its own panel controller). The publisher writes into the surface's `useAppPanelController` store in `apps/app/src/lib/app-fixed-tab-navigation.tsx`; the plugin hook, `selectTab`, `closeTab` and the icon read that store. Contract tests: the panel controller contract in `apps/app/src/test/panel-controller-contract.tsx`, run against the thread view, New thread screen and plugin page, plus `app-panel-tabs.test.tsx`.
+- **Stabilization:** audit whether every plugin should see other tabs' URLs and file paths; whether split panes need a per-pane list or `selectedKey` per pane (today it is the focused pane's tab); whether reorder, move between panes or pin should join `selectTab`/`closeTab`; and whether `detail` needs more (a file's source or line range, a terminal's target). Then rename project-wide and remove this entry.
 
 ## Unified tabs (`experimental_tab`)
 

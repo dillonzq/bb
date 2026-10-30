@@ -51,7 +51,6 @@ import {
 } from "../plugin-catalog/marketplace-publishers.js";
 import { deleteSecretFile, readOrCreateSecretFile } from "@bb/secret-storage";
 import {
-  pluginUpdateCheckEntrySchema,
   ROOT_PLUGIN_SOURCE_SELECTION,
   type InstalledPlugin,
   type PluginCapabilitySummary,
@@ -174,7 +173,11 @@ import {
   raceTimeout,
   settledWithin,
 } from "./plugin-time-box.js";
-import { createPluginUpdates } from "./plugin-updates.js";
+import {
+  createPluginUpdates,
+  parsePersistedUpdateEntry,
+  pluginVersionLabelForRow,
+} from "./plugin-updates.js";
 
 import type {
   LoadedPlugin,
@@ -477,7 +480,17 @@ const SCHEDULE_SWEEP_BATCH_SIZE = 100;
 
 class PluginRpcBoundaryError extends Error {
   constructor(readonly rpcError: PluginRpcError) {
-    super(rpcError.message);
+    const issues = rpcError.issues
+      ?.slice(0, 3)
+      .map((issue) =>
+        issue.path
+          ? `${issue.path.join(".")}: ${issue.message}`
+          : issue.message,
+      )
+      .join("; ");
+    const summary =
+      issues && issues.length > 300 ? `${issues.slice(0, 299)}…` : issues;
+    super(summary ? `${rpcError.message} (${summary})` : rpcError.message);
     this.name = "PluginRpcBoundaryError";
   }
 }
@@ -938,40 +951,39 @@ export function createPluginService(deps: PluginServiceDeps): PluginService {
   function updateStateForRow(
     row: InstalledPluginRow,
   ): InstalledPlugin["updateState"] {
-    let persisted: PluginUpdateCheckEntry | undefined;
-    if (row.updateStatusDetail !== null) {
-      try {
-        const parsed = pluginUpdateCheckEntrySchema.safeParse(
-          JSON.parse(row.updateStatusDetail),
-        );
-        if (parsed.success && parsed.data.id === row.id)
-          persisted = parsed.data;
-      } catch {}
-    }
+    const persisted = parsePersistedUpdateEntry(row);
     const failure =
       row.lastFailureVersion !== null &&
       row.lastFailureAt !== null &&
       row.lastFailureDetail !== null
         ? {
             version: row.lastFailureVersion,
+            label:
+              [persisted?.candidate, persisted?.blocked].find(
+                (version) => version?.version === row.lastFailureVersion,
+              )?.label ?? pluginVersionLabelForRow(row, row.lastFailureVersion),
             at: row.lastFailureAt,
             detail: row.lastFailureDetail,
           }
         : undefined;
     return {
-      ...(persisted === undefined ? {} : { outcome: persisted.outcome }),
+      ...(persisted === null ? {} : { outcome: persisted.outcome }),
       ...(persisted?.outcome === "unavailable"
         ? { detail: persisted.detail }
         : {}),
-      ...(row.availableCompatibleVersion === null
+      ...(persisted?.candidate === undefined
         ? {}
-        : { availableVersion: row.availableCompatibleVersion }),
-      ...(row.newestIncompatibleVersion === null
-        ? {}
-        : { blockedVersion: row.newestIncompatibleVersion }),
+        : {
+            availableVersion: persisted.candidate.version,
+            availableLabel: persisted.candidate.label,
+          }),
       ...(persisted?.blocked === undefined
         ? {}
-        : { blockedReasons: persisted.blocked.reasons }),
+        : {
+            blockedVersion: persisted.blocked.version,
+            blockedLabel: persisted.blocked.label,
+            blockedReasons: persisted.blocked.reasons,
+          }),
       ...(row.lastUpdateCheckAt === null
         ? {}
         : { lastCheckAt: row.lastUpdateCheckAt }),
@@ -1607,7 +1619,6 @@ export function createPluginService(deps: PluginServiceDeps): PluginService {
       for (const watcher of builtinSourceWatchers.splice(0)) watcher.close();
       await disposeAll();
       await syncCliSkill();
-      notifyPluginsChanged();
     },
 
     handleUncaughtException,
